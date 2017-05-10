@@ -52,6 +52,7 @@ set(SRC_M4
 	"${PATH_HACKRF_FIRMWARE_COMMON}/xapp058/micro.c"
 	"${PATH_HACKRF_FIRMWARE_COMMON}/xapp058/ports.c"
 	"${PATH_HACKRF_FIRMWARE_COMMON}/rom_iap.c"
+	"${PATH_HACKRF_FIRMWARE_COMMON}/hackrf_ui.c"
 )
 
 DeclareTargets()

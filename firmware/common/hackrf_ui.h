@@ -14,4 +14,4 @@ void hackrf_ui_setBBLNAGain(const uint32_t gain_db) __attribute__((weak));
 void hackrf_ui_setBBVGAGain(const uint32_t gain_db) __attribute__((weak));
 void hackrf_ui_setBBTXVGAGain(const uint32_t gain_db) __attribute__((weak));
 
-#endif
+#endif /* HACKRF_UI_H */

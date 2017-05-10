@@ -22,7 +22,7 @@
 
 #include "usb_api_transceiver.h"
 
-#include "hackrf-ui.h"
+#include "hackrf_ui.h"
 #include <libopencm3/cm3/vector.h>
 #include <libopencm3/lpc43xx/m4/nvic.h>
 #include "sgpio_isr.h"

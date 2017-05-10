@@ -46,7 +46,7 @@
 #include "usb_api_transceiver.h"
 #include "usb_bulk_buffer.h"
  
-#include "hackrf-ui.h"
+#include "hackrf_ui.h"
 
 static const usb_request_handler_fn vendor_request_handler[] = {
 	NULL,
