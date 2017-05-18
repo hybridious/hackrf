@@ -216,6 +216,10 @@ extern "C"
 #define SCU_PINMUX_GPIO3_14 (P7_6)  /* GPIO3[14] */
 #define SCU_PINMUX_GPIO3_15 (P7_7)  /* GPIO3[15] */
 
+#define SCU_PINMUX_GPIO5_7  (P2_8)  /* GPIO5[7] */
+#define SCU_PINMUX_GPIO1_10 (P2_9)  /* GPIO1[10] */
+#define SCU_PINMUX_GPIO1_13 (P2_13) /* GPIO1[13] */
+
 #define SCU_PINMUX_SD_POW   (P1_5)  /* GPIO1[8] */
 #define SCU_PINMUX_SD_CMD   (P1_6)  /* GPIO1[9] */
 #define SCU_PINMUX_SD_VOLT0 (P1_8)  /* GPIO1[1] */

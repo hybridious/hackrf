@@ -21,10 +21,10 @@
 
 #include "hackrf_core.h"
 #include "hackrf_ui.h"
+#include "gpio_lpc.h"
+#include <libopencm3/lpc43xx/scu.h>
 
-uint8_t display_address = 0x00;
-
-// A large amount of this is from https://github.com/CaptainStouf/raspberry_lcd4x20_I2C
+// Constants from https://github.com/CaptainStouf/raspberry_lcd4x20_I2C
 // Which is released under the GPL2 license
 
 // LCD Address
@@ -78,25 +78,57 @@ uint8_t display_address = 0x00;
 
 uint8_t backlight_state = LCD_BACKLIGHT;
 
-void write_four_bits(uint8_t data) {
-	uint8_t byte = data | backlight_state;
-	i2c_bus_transfer(&i2c0, ADDRESS, &byte, 1, NULL, 0);
-	byte |=  En;
-	i2c_bus_transfer(&i2c0, ADDRESS, &byte, 1, NULL, 0);
+static struct gpio_t gpio_lcd_d[] = {
+	GPIO(3, 8),
+	GPIO(3, 9),
+	GPIO(3, 10),
+	GPIO(3, 11),
+	GPIO(3, 12),
+	GPIO(3, 13),
+	GPIO(3, 14),
+	GPIO(3, 15)
+};
+
+// static struct gpio_t gpio_lcd_d0 = GPIO(3, 8);
+// static struct gpio_t gpio_lcd_d1 = GPIO(3, 9);
+// static struct gpio_t gpio_lcd_d2 = GPIO(3, 10);
+// static struct gpio_t gpio_lcd_d3 = GPIO(3, 11);
+// static struct gpio_t gpio_lcd_d4 = GPIO(3, 12);
+// static struct gpio_t gpio_lcd_d5 = GPIO(3, 13);
+// static struct gpio_t gpio_lcd_d6 = GPIO(3, 14);
+// static struct gpio_t gpio_lcd_d7 = GPIO(3, 15);
+
+static struct gpio_t gpio_lcd_rs = GPIO(5, 7);
+static struct gpio_t gpio_lcd_rw = GPIO(1, 10);
+static struct gpio_t gpio_lcd_en = GPIO(1, 13);
+
+void write_bits(uint8_t byte, bool rs) {
+	int i;
+	for(i=0; i<8; i++) {
+		if(byte&0x1) {
+			gpio_set(&gpio_lcd_d[i]);
+		} else {
+			gpio_clear(&gpio_lcd_d[i]);
+		}
+		byte >>=1;
+	}
+	if(rs) {
+		gpio_set(&gpio_lcd_rs);
+	} else {
+		gpio_clear(&gpio_lcd_rs);
+	}
+	gpio_set(&gpio_lcd_en);
 	delay(102000);
-	byte = byte & ~En;
-	i2c_bus_transfer(&i2c0, ADDRESS, &byte, 1, NULL, 0);
+	gpio_clear(&gpio_lcd_en);
 	delay(20400);
 }
 
-void lcd_write(uint8_t cmd) {
-	write_four_bits(cmd & 0xF0);
-	write_four_bits((cmd << 4) & 0xF0);
+void lcd_write(uint8_t byte) {
+	write_bits(byte, false);
 }
 
-void lcd_write_char(uint8_t chr) {
-	write_four_bits(Rs | (chr & 0xF0));
-	write_four_bits(Rs | ((chr << 4) & 0xF0));
+void lcd_write_char(uint8_t byte) {
+	write_bits(byte, true);
 }
 
 void lcd_clear(void) {
@@ -106,32 +138,45 @@ void lcd_clear(void) {
 
 void hackrf_ui_init(void) {
 	int i;
-    // write_four_bits(0x30);
-    // write_four_bits(0x30);
-    // write_four_bits(0x30);
-    // write_four_bits(0x20);
-    // lcd_write(LCD_FUNCTIONSET | LCD_2LINE | LCD_5x8DOTS | LCD_4BITMODE);
-    // lcd_write(LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKON);
-    // lcd_write(LCD_CLEARDISPLAY);
-    // lcd_write(LCD_ENTRYMODESET | LCD_ENTRYLEFT);
+	scu_pinmux(SCU_PINMUX_GPIO3_8, SCU_GPIO_PDN | SCU_CONF_FUNCTION0);
+	scu_pinmux(SCU_PINMUX_GPIO3_9, SCU_GPIO_PDN | SCU_CONF_FUNCTION0);
+	scu_pinmux(SCU_PINMUX_GPIO3_10, SCU_GPIO_PDN | SCU_CONF_FUNCTION0);
+	scu_pinmux(SCU_PINMUX_GPIO3_11, SCU_GPIO_PDN | SCU_CONF_FUNCTION0);
+	scu_pinmux(SCU_PINMUX_GPIO3_12, SCU_GPIO_PDN | SCU_CONF_FUNCTION0);
+	scu_pinmux(SCU_PINMUX_GPIO3_13, SCU_GPIO_PDN | SCU_CONF_FUNCTION0);
+	scu_pinmux(SCU_PINMUX_GPIO3_14, SCU_GPIO_PDN | SCU_CONF_FUNCTION0);
+	scu_pinmux(SCU_PINMUX_GPIO3_15, SCU_GPIO_PDN | SCU_CONF_FUNCTION0);
 
-	const uint8_t data[] = {0x03,0x03,0x03,0x02,
-		LCD_FUNCTIONSET | LCD_2LINE | LCD_5x8DOTS | LCD_4BITMODE,
-		LCD_DISPLAYCONTROL | LCD_DISPLAYON,
+	scu_pinmux(SCU_PINMUX_GPIO5_7, SCU_GPIO_PDN | SCU_CONF_FUNCTION4);
+	scu_pinmux(SCU_PINMUX_GPIO1_10, SCU_GPIO_PDN | SCU_CONF_FUNCTION0);
+	scu_pinmux(SCU_PINMUX_GPIO1_13, SCU_GPIO_PDN | SCU_CONF_FUNCTION0);
+
+	for(i=0; i<8; i++) {
+		gpio_output(&gpio_lcd_d[i]);
+		gpio_clear(&gpio_lcd_d[i]);
+	}
+
+	gpio_output(&gpio_lcd_rs);
+	gpio_output(&gpio_lcd_rw);
+	gpio_output(&gpio_lcd_en);
+
+	gpio_clear(&gpio_lcd_rs);
+	gpio_clear(&gpio_lcd_rw);
+	gpio_clear(&gpio_lcd_en);
+	const uint8_t data[] = {
+		LCD_FUNCTIONSET | LCD_2LINE | LCD_5x8DOTS | LCD_8BITMODE,
+		LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_BLINKON,
 		LCD_CLEARDISPLAY,
 		LCD_ENTRYMODESET | LCD_ENTRYLEFT
 	};
-	for(i=0; i<8; i++)
+	for(i=0; i<4; i++)
 		lcd_write(data[i]);
 
-	// delay(40800000);
-
+	lcd_clear();
 	lcd_write(0x80);
-	char freq_string[] = "1Frequency:";
-	// uint8_t test[] = {0x46, 0x72, 0x65, 0x71, 0x75, 0x65, 0x6e, 0x63, 0x79};
-	for(i=0; i<11; i++) {
+	char freq_string[] = "Frequency:";
+	// // uint8_t test[] = {0x46, 0x72, 0x65, 0x71, 0x75, 0x65, 0x6e, 0x63, 0x79};
+	for(i=0; i<10; i++) {
 		lcd_write_char(freq_string[i]);
-		led_toggle(LED2);
 	}
-	led_on(LED3);
 }
