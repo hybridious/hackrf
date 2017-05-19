@@ -136,6 +136,49 @@ void lcd_clear(void) {
 	lcd_write(LCD_RETURNHOME);
 }
 
+#define CHAR_0 48
+static uint64_t freq = 0;
+static uint32_t lna_gain = 0;
+static uint32_t vga_gain = 0;
+static rf_path_direction_t direction = RF_PATH_DIRECTION_OFF;
+
+void draw_screen(void) {
+	int group, j, i = 0;
+	uint64_t x = freq;
+	char line1[] = {'F', ':', 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	                0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
+	char line2[] = {'L', ':', 0x20, 0x20, 0x20, 'V', ':', 0x20,
+	                0x20, 0x20, 'A', ':', 0x20, 0x20, 0x20, 0x20};
+	char freq_str[] = {0x20, 0x20, 0x20, 0x20, 0x20,
+	                   0x20, 0x20, 0x20, 0x20, 0x20};
+	// Frequency
+	while(x) {
+		freq_str[i++] = x % 10;
+		x = x / 10;
+	}
+	group = i % 3;
+	j = 2;
+	while(i) {
+		if(group) {
+			line1[j++] = freq_str[--i] + CHAR_0;
+			group--;
+		} else {
+			line1[j++] = ',';
+			group = 3;
+		}
+	}
+
+	lcd_clear();
+	lcd_write(0x80);
+	for(i=0; i<16; i++) {
+		lcd_write_char(line1[i]);
+	}
+	lcd_write(0xC0);
+	for(i=0; i<16; i++) {
+		lcd_write_char(line2[i]);
+	}
+}
+
 void hackrf_ui_init(void) {
 	int i;
 	scu_pinmux(SCU_PINMUX_GPIO3_8, SCU_GPIO_PDN | SCU_CONF_FUNCTION0);
@@ -173,10 +216,25 @@ void hackrf_ui_init(void) {
 		lcd_write(data[i]);
 
 	lcd_clear();
-	lcd_write(0x80);
-	char freq_string[] = "Frequency:";
-	// // uint8_t test[] = {0x46, 0x72, 0x65, 0x71, 0x75, 0x65, 0x6e, 0x63, 0x79};
-	for(i=0; i<10; i++) {
-		lcd_write_char(freq_string[i]);
-	}
+	draw_screen();
+}
+
+void hackrf_ui_setFrequency(uint64_t _freq) {
+	freq = _freq;
+	draw_screen();
+}
+
+void hackrf_ui_setBBLNAGain(const uint32_t gain_db) {
+	lna_gain = gain_db;
+	draw_screen();
+}
+
+void hackrf_ui_setBBVGAGain(const uint32_t gain_db) {
+	vga_gain = gain_db;
+	draw_screen();
+}
+
+void hackrf_ui_setDirection(const rf_path_direction_t _direction) {
+	direction = _direction;
+	draw_screen();
 }
