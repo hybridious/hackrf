@@ -140,31 +140,88 @@ void lcd_clear(void) {
 static uint64_t freq = 0;
 static uint32_t lna_gain = 0;
 static uint32_t vga_gain = 0;
+static uint32_t tx_gain = 0;
 static rf_path_direction_t direction = RF_PATH_DIRECTION_OFF;
+static bool lna_on = false;
+static bool frequency_chaged = false;
 
 void draw_screen(void) {
 	int group, j, i = 0;
 	uint64_t x = freq;
 	char line1[] = {'F', ':', 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
 	                0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
-	char line2[] = {'L', ':', 0x20, 0x20, 0x20, 'V', ':', 0x20,
+	char line2_rx[] = {'L', ':', 0x20, 0x20, 0x20, 'V', ':', 0x20,
 	                0x20, 0x20, 'A', ':', 0x20, 0x20, 0x20, 0x20};
+	char line2_tx[] = {'V', ':', 0x20, 0x20, 0x20, 'A', ':', 0x20,
+	                0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
 	char freq_str[] = {0x20, 0x20, 0x20, 0x20, 0x20,
 	                   0x20, 0x20, 0x20, 0x20, 0x20};
-	// Frequency
-	while(x) {
-		freq_str[i++] = x % 10;
-		x = x / 10;
-	}
-	group = i % 3;
-	j = 2;
-	while(i) {
-		if(group) {
-			line1[j++] = freq_str[--i] + CHAR_0;
-			group--;
-		} else {
-			line1[j++] = ',';
+	if(frequency_chaged) {
+		// Frequency
+		while(x) {
+			freq_str[i++] = x % 10;
+			x = x / 10;
+		}
+		group = i % 3;
+		if(group == 0)
 			group = 3;
+		j = 2;
+		while(i) {
+			if(group) {
+				line1[j++] = freq_str[--i] + CHAR_0;
+				group--;
+			} else {
+				line1[j++] = ',';
+				group = 3;
+			}
+		}
+	}
+
+	if(direction == RF_PATH_DIRECTION_RX) {
+		// LNA Gain
+		x = lna_gain;
+		while(x) {
+			freq_str[i++] = x % 10;
+			x = x / 10;
+		}
+		j = 2;
+		while(i) {
+			line2_rx[j++] = freq_str[--i] + CHAR_0;
+		}
+	
+		// VGA Gain
+		x = vga_gain;
+		while(x) {
+			freq_str[i++] = x % 10;
+			x = x / 10;
+		}
+		j = 7;
+		while(i) {
+			line2_rx[j++] = freq_str[--i] + CHAR_0;
+		}
+
+		if(lna_on) {
+			line2_rx[12] = '1';
+		} else {
+			line2_rx[12] = '0';	
+		}
+	}
+	if(direction == RF_PATH_DIRECTION_TX) {
+		// TX Gain
+		x = tx_gain;
+		while(x) {
+			freq_str[i++] = x % 10;
+			x = x / 10;
+		}
+		j = 2;
+		while(i) {
+			line2_tx[j++] = freq_str[--i] + CHAR_0;
+		}
+
+		if(lna_on) {
+			line2_tx[7] = '1';
+		} else {
+			line2_tx[7] = '0';	
 		}
 	}
 
@@ -174,8 +231,15 @@ void draw_screen(void) {
 		lcd_write_char(line1[i]);
 	}
 	lcd_write(0xC0);
-	for(i=0; i<16; i++) {
-		lcd_write_char(line2[i]);
+	if(direction == RF_PATH_DIRECTION_RX) {
+		for(i=0; i<16; i++) {
+			lcd_write_char(line2_rx[i]);
+		}
+	}
+	if(direction == RF_PATH_DIRECTION_TX) {
+		for(i=0; i<16; i++) {
+			lcd_write_char(line2_tx[i]);
+		}
 	}
 }
 
@@ -216,11 +280,12 @@ void hackrf_ui_init(void) {
 		lcd_write(data[i]);
 
 	lcd_clear();
-	draw_screen();
+	// draw_screen();
 }
 
 void hackrf_ui_setFrequency(uint64_t _freq) {
 	freq = _freq;
+	frequency_chaged = true;
 	draw_screen();
 }
 
@@ -237,4 +302,12 @@ void hackrf_ui_setBBVGAGain(const uint32_t gain_db) {
 void hackrf_ui_setDirection(const rf_path_direction_t _direction) {
 	direction = _direction;
 	draw_screen();
+}
+
+void hackrf_ui_setLNAPower(bool _lna_on) {
+	lna_on = _lna_on;
+}
+
+void hackrf_ui_setBBTXVGAGain(const uint32_t gain_db) {
+	tx_gain = gain_db;
 }
