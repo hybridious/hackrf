@@ -485,8 +485,6 @@ void cpu_clock_init(void)
 	 *   CLK7 -> LPC43xx (uses a 12MHz crystal by default)
 	 */
 
-	// Set MS3 to divide 800 MHz to 10 MHz. Not used since CLK3 is configured to use MS0
-	si5351c_configure_multisynth(&clock_gen, 3, 80*128-512, 0, 1, 0);
 	/* MS4/CLK4 is the source for the RFFC5071 mixer (MAX2837 on rad1o). */
 	si5351c_configure_multisynth(&clock_gen, 4, 20*128-512, 0, 1, 0); /* 800/20 = 40MHz */
  	/* MS5/CLK5 is the source for the MAX2837 clock input (MAX2871 on rad1o). */

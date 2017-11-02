@@ -43,8 +43,9 @@
 
 #define OPERACAKE_SAMESIDE  OPERACAKE_PIN_U1CTRL(1)
 #define OPERACAKE_CROSSOVER OPERACAKE_PIN_U1CTRL(0)
-#define OPERACAKE_EN_LEDS (OPERACAKE_PIN_LEDEN2(1) | OPERACAKE_PIN_LEDEN(0))
-#define OPERACAKE_GPIO_EN OPERACAKE_PIN_OE(0)
+#define OPERACAKE_LEDS_ENABLE (OPERACAKE_PIN_LEDEN2(1) | OPERACAKE_PIN_LEDEN(0))
+#define OPERACAKE_LEDS_DISABLE (OPERACAKE_PIN_LEDEN2(0) | OPERACAKE_PIN_LEDEN(1))
+#define OPERACAKE_GPIO_ENABLE OPERACAKE_PIN_OE(0)
 #define OPERACAKE_GPIO_DISABLE OPERACAKE_PIN_OE(1)
 
 #define OPERACAKE_REG_INPUT    0x00
@@ -54,7 +55,7 @@
 
 #define OPERACAKE_DEFAULT_OUTPUT (OPERACAKE_GPIO_DISABLE | OPERACAKE_SAMESIDE \
 								  | OPERACAKE_PORT_A1 | OPERACAKE_PORT_B1 \
-								  | OPERACAKE_EN_LEDS)
+								  | OPERACAKE_LEDS_ENABLE)
 #define OPERACAKE_CONFIG_ALL_OUTPUT (0x00)
 
 #define OPERACAKE_DEFAULT_ADDRESS 0x18
@@ -125,9 +126,8 @@ uint8_t operacake_set_ports(uint8_t address, uint8_t PA, uint8_t PB) {
 		return 1;
 	}
 	/* Check which side PA and PB are on */
-	if((((PA <= OPERACAKE_PA4) && (PB <= OPERACAKE_PA4))
-	    || ((PA > OPERACAKE_PA4) && (PB > OPERACAKE_PA4)))
-	    && !(PA == 0 && PB == 0)) {
+	if(((PA <= OPERACAKE_PA4) && (PB <= OPERACAKE_PA4))
+		|| ((PA > OPERACAKE_PA4) && (PB > OPERACAKE_PA4))) {
 		return 1;
 	}
 	
@@ -140,15 +140,7 @@ uint8_t operacake_set_ports(uint8_t address, uint8_t PA, uint8_t PB) {
 	pa = port_to_pins(PA);
 	pb = port_to_pins(PB);
 		
-	reg = (OPERACAKE_GPIO_DISABLE | side
-					| pa | pb | OPERACAKE_EN_LEDS);
-	if (PA == 0 && PB == 0) {
-		uint8_t config_pins = ~(OPERACAKE_PIN_OE(1) | OPERACAKE_PIN_LEDEN(1) | OPERACAKE_PIN_LEDEN2(1));
-		reg = OPERACAKE_GPIO_EN | OPERACAKE_EN_LEDS;
-		operacake_write_reg(oc_bus, address, OPERACAKE_REG_CONFIG, config_pins);
-	} else {
-		operacake_write_reg(oc_bus, address, OPERACAKE_REG_CONFIG, OPERACAKE_CONFIG_ALL_OUTPUT);
-	}
+	reg = (OPERACAKE_GPIO_DISABLE | side | pa | pb | OPERACAKE_LEDS_ENABLE);
 	operacake_write_reg(oc_bus, address, OPERACAKE_REG_OUTPUT, reg);
 	return 0;
 }
@@ -201,4 +193,17 @@ uint8_t operacake_set_range(uint32_t freq_mhz) {
 	operacake_set_ports(operacake_boards[0], ranges[i].portA, ranges[i].portB);
 	current_range = i;
 	return 0;
+}
+
+void operacake_gpio_mode(uint8_t address, uint8_t enable) {
+	uint8_t reg, config_pins;
+	if (enable) {
+		reg = OPERACAKE_GPIO_ENABLE | OPERACAKE_LEDS_ENABLE;
+		config_pins = ~(OPERACAKE_PIN_OE(1) | OPERACAKE_PIN_LEDEN(1) | OPERACAKE_PIN_LEDEN2(1));
+	} else {
+		reg = OPERACAKE_GPIO_DISABLE | OPERACAKE_LEDS_ENABLE;
+		config_pins = OPERACAKE_CONFIG_ALL_OUTPUT;
+	}
+	operacake_write_reg(oc_bus, address, OPERACAKE_REG_CONFIG, config_pins);
+	operacake_write_reg(oc_bus, address, OPERACAKE_REG_OUTPUT, reg);
 }

@@ -24,6 +24,7 @@
 #include "sct.h"
 
 #include <hackrf_core.h>
+#include <operacake.h>
 
 #include <stddef.h>
 
@@ -33,11 +34,11 @@
 #include <libopencm3/lpc43xx/gima.h>
 
 
-#undef GREATFET_OPERACAKE
-
 usb_request_status_t usb_vendor_request_counter_start(
 		usb_endpoint_t* const endpoint, const usb_transfer_stage_t stage) {
 	if (stage == USB_TRANSFER_STAGE_SETUP) {
+		// DGS FIXME: hardcoded to Dominic's operacake
+		operacake_gpio_mode(24, 1);
 
 		RESET_CTRL1 = RESET_CTRL1_SCT_RST;
 
@@ -49,20 +50,6 @@ usb_request_status_t usb_vendor_request_counter_start(
 		// there are additional commands that fill the time
 		delay(8);
 
-		#ifdef GREATFET_OPERACAKE
-		// U2CTRL0
-		scu_pinmux(P4_3, SCU_CONF_EPUN_DIS_PULLUP | SCU_CONF_EHS_FAST | SCU_CONF_FUNCTION1);
-		// U2CTRL1
-		scu_pinmux(P4_6, SCU_CONF_EPUN_DIS_PULLUP | SCU_CONF_EHS_FAST | SCU_CONF_FUNCTION1);
-		// U3CTRL0
-		scu_pinmux(P4_4, SCU_CONF_EPUN_DIS_PULLUP | SCU_CONF_EHS_FAST | SCU_CONF_FUNCTION1);
-		// U3CTRL1
-		scu_pinmux(P4_2, SCU_CONF_EPUN_DIS_PULLUP | SCU_CONF_EHS_FAST | SCU_CONF_FUNCTION1);
-		// U1CTRL
-		scu_pinmux(P4_5, SCU_CONF_EPUN_DIS_PULLUP | SCU_CONF_EHS_FAST | SCU_CONF_FUNCTION1);
-		#endif
-
-		#ifndef GREATFET_OPERACAKE
 		// U2CTRL0
 		scu_pinmux(P7_4, SCU_CONF_EPUN_DIS_PULLUP | SCU_CONF_EHS_FAST | SCU_CONF_FUNCTION1);
 		// U2CTRL1
@@ -73,8 +60,6 @@ usb_request_status_t usb_vendor_request_counter_start(
 		scu_pinmux(P7_7, SCU_CONF_EPUN_DIS_PULLUP | SCU_CONF_EHS_FAST | SCU_CONF_FUNCTION1);
 		// U1CTRL
 		scu_pinmux(P7_0, SCU_CONF_EPUN_DIS_PULLUP | SCU_CONF_EHS_FAST | SCU_CONF_FUNCTION1);
-		#endif
-
 
 		/* SGPIO bits ------------- */
 		SGPIO_CTRL_ENABLE &= (!BIT3 && 0xFFFF); // Disable slice 3 (D)
@@ -156,20 +141,6 @@ usb_request_status_t usb_vendor_request_counter_start(
 		SCT_EV2_CTRL = SCT_EV2_CTRL_COMBMODE_MATCH | SCT_EV2_CTRL_MATCHSEL(2);
 		SCT_EV3_CTRL = SCT_EV3_CTRL_COMBMODE_MATCH | SCT_EV3_CTRL_MATCHSEL(3);
 
-		#ifdef GREATFET_OPERACAKE
-		#define U1CTRL_SET SCT_OUT5_SET
-		#define U1CTRL_CLR SCT_OUT5_CLR
-		#define U2CTRL0_SET SCT_OUT3_SET
-		#define U2CTRL0_CLR SCT_OUT3_CLR
-		#define U2CTRL1_SET SCT_OUT4_SET
-		#define U2CTRL1_CLR SCT_OUT4_CLR
-		#define U3CTRL0_SET SCT_OUT2_SET
-		#define U3CTRL0_CLR SCT_OUT2_CLR
-		#define U3CTRL1_SET SCT_OUT0_SET
-		#define U3CTRL1_CLR SCT_OUT0_CLR
-		#endif
-
-		#ifndef GREATFET_OPERACAKE
 		#define U1CTRL_SET SCT_OUT14_SET
 		#define U1CTRL_CLR SCT_OUT14_CLR
 		#define U2CTRL0_SET SCT_OUT13_SET
@@ -180,7 +151,6 @@ usb_request_status_t usb_vendor_request_counter_start(
 		#define U3CTRL0_CLR SCT_OUT11_CLR
 		#define U3CTRL1_SET SCT_OUT8_SET
 		#define U3CTRL1_CLR SCT_OUT8_CLR
-		#endif
 
 		// Event 0, 2 sets output 3, 2. Event 1, 3 clears output 3, 2.
 		U2CTRL0_SET = SCT_OUT13_SET_SET0(1) | SCT_OUT13_SET_SET2(1);
@@ -245,7 +215,8 @@ usb_request_status_t usb_vendor_request_counter_stop(
 			// Stop timer
 			SCT_CTRL |= SCT_CTRL_HALT_L(1);
 		}
-
+		// DGS FIXME: hardcoded to Dominic's operacake
+		operacake_gpio_mode(24, 0);
 		usb_transfer_schedule_ack(endpoint->in);
 	}
 	return USB_REQUEST_STATUS_OK;
