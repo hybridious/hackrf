@@ -19,7 +19,7 @@ matrix:
     - os: osx
   include:
     - os: linux
-      compiler: clang
+      compiler: gcc
     - os: osx
       osx_image: xcode7.3
       compiler: clang
